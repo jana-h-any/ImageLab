@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ImageLab</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #0a0a0f; color: #e0e0e0; overflow: hidden; }
+        .app-container { display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Main Canvas */
+        .main-canvas { flex: 1; display: flex; flex-direction: column; background: #12121a; margin: 12px; border-radius: 16px; overflow: hidden; }
+        .canvas-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: linear-gradient(135deg, #1a1a2a, #1f1f30); border-bottom: 1px solid #2a2a3a; }
+        .canvas-title { font-size: 0.95rem; font-weight: 600; color: #a78bfa; display: flex; align-items: center; gap: 8px; }
+        .canvas-title i { font-size: 1.1rem; }
+        .header-actions { display: flex; gap: 8px; align-items: center; }
+        .view-controls { display: flex; gap: 4px; background: #1a1a2a; border-radius: 10px; padding: 3px; }
+        .view-btn { padding: 5px 14px; background: transparent; border: none; border-radius: 8px; color: #888; cursor: pointer; font-size: 0.75rem; transition: all 0.2s; }
+        .view-btn:hover { color: #e0e0e0; }
+        .view-btn.active { background: #7c3aed; color: white; }
+        .hist-toggle-btn { padding: 5px 14px; background: linear-gradient(135deg, #059669, #047857); border: none; border-radius: 10px; color: white; cursor: pointer; font-size: 0.75rem; font-weight: 500; transition: all 0.2s; }
+        .hist-toggle-btn:hover { transform: scale(1.03); }
+        .hist-toggle-btn.active { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
+        
+        /* Image Display */
+        .image-display { flex: 1; display: flex; position: relative; overflow: hidden; }
+        .image-panel { flex: 1; display: flex; flex-direction: column; position: relative; }
+        .image-label { position: absolute; top: 10px; left: 10px; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; z-index: 10; font-weight: 600; letter-spacing: 0.5px; backdrop-filter: blur(8px); }
+        .image-label.before { background: rgba(124, 58, 237, 0.85); }
+        .image-label.after { background: rgba(5, 150, 105, 0.85); }
+        .image-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; background: #0a0a0f; overflow: auto; }
+        .image-wrapper img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .divider { width: 3px; background: linear-gradient(180deg, #7c3aed, #ec4899, #059669); cursor: ew-resize; flex-shrink: 0; }
+        
+        /* Histogram under images */
+        .hist-panel { height: 0; overflow: hidden; transition: height 0.35s ease; background: #0d0d15; border-top: 1px solid #1a1a2a; }
+        .hist-panel.open { height: 150px; }
+        .hist-panel canvas { width: 100%; height: 140px; padding: 6px 10px; }
+        
+        /* Sidebar */
+        .control-sidebar { width: 400px; background: #12121a; margin: 12px 12px 12px 0; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; }
+        .sidebar-header { padding: 12px 16px; background: linear-gradient(135deg, #1a1a2a, #1f1f30); border-bottom: 1px solid #2a2a3a; }
+        .sidebar-header h2 { font-size: 0.9rem; background: linear-gradient(135deg, #a78bfa, #ec4899); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        
+        /* Upload Areas */
+        .upload-area { border: 2px dashed #7c3aed; border-radius: 12px; padding: 12px; text-align: center; cursor: pointer; background: rgba(124,58,237,0.04); transition: all 0.2s; }
+        .upload-area:hover { background: rgba(124,58,237,0.1); border-color: #a78bfa; }
+        
+        /* Parameters */
+        .param-title { font-size: 0.65rem; font-weight: 600; color: #a78bfa; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1.2px; }
+        .param-group { margin-bottom: 10px; }
+        .param-label { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 0.72rem; color: #999; }
+        input[type="range"] { width: 100%; height: 4px; -webkit-appearance: none; background: #2a2a3a; border-radius: 5px; outline: none; }
+        input[type="range"]::-webkit-slider-thumb { width: 14px; height: 14px; border-radius: 50%; background: #a78bfa; cursor: pointer; -webkit-appearance: none; }
+        input[type="number"] { width: 65px; padding: 5px 8px; background: #1f1f2f; border: 1px solid #2a2a3a; border-radius: 8px; color: #e0e0e0; text-align: center; font-size: 0.8rem; }
+        select { width: 100%; padding: 7px 10px; background: #1f1f2f; border: 1px solid #2a2a3a; border-radius: 8px; color: #e0e0e0; font-size: 0.75rem; }
+        .apply-btn { width: 100%; padding: 7px; background: linear-gradient(135deg, #7c3aed, #6d28d9); border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; margin-top: 6px; font-size: 0.72rem; transition: all 0.2s; }
+        .apply-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(124,58,237,0.3); }
+        
+        /* Action Bar */
+        .action-bar { display: flex; gap: 6px; padding: 8px 10px; background: #1a1a2a; margin: 8px 10px; border-radius: 10px; flex-wrap: wrap; }
+        .action-btn { flex: 1; padding: 7px 4px; background: #1f1f2f; border: none; border-radius: 8px; color: #ccc; cursor: pointer; font-size: 0.68rem; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 4px; }
+        .action-btn:hover { background: #7c3aed; color: white; transform: translateY(-1px); }
+        .action-btn.upload-btn { background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; }
+        .action-btn.upload-btn:hover { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+        
+        /* Categories */
+        .categories { flex: 1; overflow-y: auto; padding: 0 10px 10px; }
+        .category { margin-bottom: 6px; background: #1a1a2a; border-radius: 10px; overflow: hidden; }
+        .category-header { padding: 9px 12px; background: #1f1f2f; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.15s; }
+        .category-header:hover { background: #252535; }
+        .category-header h3 { font-size: 0.75rem; color: #c4b5fd; display: flex; align-items: center; gap: 6px; }
+        .category-header .fa-chevron-down { font-size: 0.6rem; color: #666; transition: transform 0.25s; }
+        .category-content { padding: 8px; display: none; overflow-y: auto; }
+        .category-content.open { display: block; }
+        .filter-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; }
+        .filter-item { padding: 6px 8px; background: #1f1f2f; border: 1px solid transparent; border-radius: 7px; color: #ddd; cursor: pointer; font-size: 0.68rem; text-align: left; transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
+        .filter-item:hover { background: #7c3aed; color: white; border-color: #a78bfa; transform: translateX(2px); }
+        .filter-item i { width: 14px; font-size: 0.7rem; }
+        
+        /* Arithmetic */
+        .arithmetic-inline { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+        .arithmetic-buttons { display: flex; align-items: center; gap: 3px; background: #1f1f2f; border-radius: 8px; padding: 2px; }
+        .arithmetic-buttons button { width: 26px; height: 26px; background: #2a2a3a; border: none; border-radius: 6px; color: #a78bfa; cursor: pointer; font-size: 0.85rem; transition: all 0.15s; }
+        .arithmetic-buttons button:hover { background: #7c3aed; color: white; }
+        .arithmetic-buttons input { width: 50px; text-align: center; background: #1a1a2a; border: none; color: white; font-size: 0.8rem; padding: 3px; }
+        .arithmetic-btn { flex: 1; padding: 5px; background: #7c3aed; border: none; border-radius: 7px; color: white; cursor: pointer; font-size: 0.68rem; font-weight: 600; transition: all 0.15s; }
+        .arithmetic-btn:hover { background: #6d28d9; }
+        
+        /* Second image row */
+        .second-image-row { display: flex; align-items: center; gap: 8px; background: linear-gradient(135deg, rgba(124,58,237,0.1), rgba(236,72,153,0.06)); border-radius: 10px; padding: 6px 10px; margin: 0 10px 6px; }
+        .second-image-row .upload-area { margin: 0; padding: 6px 8px; flex: 1; border-width: 1px; }
+        .second-image-row .upload-area i { font-size: 14px; }
+        .second-image-row .upload-area p { font-size: 0.68rem; display: inline; margin-left: 4px; }
+        .second-image-preview { font-size: 0.62rem; color: #10b981; white-space: nowrap; }
+        
+        /* Toast */
+        .toast { position: fixed; bottom: 16px; right: 16px; background: #1f1f2f; border-left: 3px solid #7c3aed; padding: 8px 16px; border-radius: 8px; animation: slideUp 0.3s ease; z-index: 1000; font-size: 0.78rem; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        /* Loading */
+        .loading-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; z-index: 100; border-radius: 16px; backdrop-filter: blur(4px); }
+        .spinner { width: 36px; height: 36px; border: 3px solid rgba(124,58,237,0.2); border-top-color: #a78bfa; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #7c3aed40; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #7c3aed; }
+        .hidden-input { display: none; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="main-canvas">
+            <div class="canvas-header">
+                <div class="canvas-title"><i class="fas fa-microchip"></i> ImageLap</div>
+                <div class="header-actions">
+                    <button class="hist-toggle-btn" id="histToggleBtn" onclick="toggleHistograms()"><i class="fas fa-chart-bar"></i> Show Histograms</button>
+                    <div class="view-controls">
+                        <button class="view-btn active" onclick="setView('split')"><i class="fas fa-columns"></i> Split</button>
+                        <button class="view-btn" onclick="setView('before')"><i class="fas fa-image"></i> Before</button>
+                        <button class="view-btn" onclick="setView('after')"><i class="fas fa-magic"></i> After</button>
+                    </div>
+                </div>
+            </div>
+            <div class="image-display" id="imageDisplay">
+                <div class="image-panel split" id="beforePanel">
+                    <div class="image-label before">BEFORE</div>
+                    <div class="image-wrapper" id="beforeImage">
+                        <div class="upload-area" id="uploadArea"><i class="fas fa-cloud-upload-alt" style="font-size: 28px; color: #7c3aed;"></i><p style="margin-top: 8px; font-size: 0.8rem; color: #888;">Click to upload image</p><input type="file" id="imageInput" accept="image/*" style="display: none;"></div>
+                    </div>
+                    <div class="hist-panel" id="beforeHistPanel"><canvas id="beforeHistCanvas"></canvas></div>
+                </div>
+                <div class="divider" id="divider"></div>
+                <div class="image-panel split" id="afterPanel">
+                    <div class="image-label after">AFTER</div>
+                    <div class="image-wrapper" id="afterImage"><div style="text-align: center; padding: 40px; color: #555;"><i class="fas fa-cogs" style="font-size: 28px;"></i><p style="font-size: 0.78rem; margin-top: 8px;">Apply a filter to see results</p></div></div>
+                    <div class="hist-panel" id="afterHistPanel"><canvas id="afterHistCanvas"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-sidebar" id="controlSidebar" style="display: none;">
+            <div class="sidebar-header"><h2><i class="fas fa-sliders-h"></i> Controls</h2></div>
+            
+            <input type="file" id="uploadBtnInput" accept="image/*" class="hidden-input">
+            
+            <div class="action-bar">
+                <button class="action-btn upload-btn" id="uploadNewBtn"><i class="fas fa-cloud-upload-alt"></i> Upload</button>
+                <button class="action-btn" onclick="undo()"><i class="fas fa-undo"></i> Undo</button>
+                <button class="action-btn" onclick="redo()"><i class="fas fa-redo"></i> Redo</button>
+                <button class="action-btn" onclick="resetImage()"><i class="fas fa-sync-alt"></i> Reset</button>
+                <button class="action-btn" onclick="saveImage()"><i class="fas fa-download"></i> Save</button>
+            </div>
+            
+            <div class="second-image-row">
+                <div class="upload-area" id="secondUploadArea" style="padding: 5px 8px;"><i class="fas fa-upload"></i><p>2nd Image</p><input type="file" id="secondImageInput" accept="image/*" style="display: none;"></div>
+                <div id="secondImagePreview" class="second-image-preview"></div>
+            </div>
+            
+            <div class="categories">
+                <!-- Lab 2 -->
+                <div class="category"><div class="category-header" onclick="toggleCategory(this)"><h3><i class="fas fa-adjust"></i> Image Types</h3><i class="fas fa-chevron-down"></i></div>
+                    <div class="category-content"><div class="filter-grid">
+                        <button class="filter-item" onclick="applyFilter('grayscale_avg')"><i class="fas fa-circle"></i>Grayscale </button>
+                        <button class="filter-item" onclick="applyFilter('grayscale_weighted')"><i class="fas fa-chart-line"></i>Grayscale (W)</button>
+                        <button class="filter-item" onclick="applyFilter('binary', {threshold: 128})"><i class="fas fa-adjust"></i>Binary (128)</button>
+                        <button class="filter-item" onclick="applyFilter('red_channel')"><i class="fas fa-circle" style="color:#f87171"></i>Red Channel</button>
+                        <button class="filter-item" onclick="applyFilter('green_channel')"><i class="fas fa-circle" style="color:#4ade80"></i>Green Channel</button>
+                        <button class="filter-item" onclick="applyFilter('blue_channel')"><i class="fas fa-circle" style="color:#60a5fa"></i>Blue Channel</button>
+                    </div></div>
+                </div>
+                
+                <!-- Lab 3 -->
+                <div class="category"><div class="category-header" onclick="toggleCategory(this)"><h3><i class="fas fa-calculator"></i> Arithmetic Operations</h3><i class="fas fa-chevron-down"></i></div>
+                    <div class="category-content">
+                        <div class="param-group">
+                            <div class="param-label"><span>Add / Subtract By:</span></div>
+                            <div class="arithmetic-inline">
+                                <div class="arithmetic-buttons">
+                                    <button onclick="changeArithmeticValue(-10)">-</button>
+                                    <input type="number" id="arithmeticValue" value="50" step="1">
+                                    <button onclick="changeArithmeticValue(10)">+</button>
+                                </div>  
+                                <button class="arithmetic-btn" onclick="applyFilter('add_constant', {value: parseInt(document.getElementById('arithmeticValue').value)})">Brightness +</button>
+                                <button class="arithmetic-btn" onclick="applyFilter('subtract_constant', {value: parseInt(document.getElementById('arithmeticValue').value)})">Brightness -</button>
+                            </div>
+                        </div>
+                        <div class="param-group">
+                            <div class="param-label"><span>Multiply / Divide By:</span></div>
+                            <div class="arithmetic-inline">
+                                <div class="arithmetic-buttons">
+                                    <button onclick="changeMultiplyValue(-0.5)">-</button>
+                                    <input type="number" id="multiplyValue" value="1.5" step="0.1">
+                                    <button onclick="changeMultiplyValue(0.5)">+</button>
+                                </div>
+                                <button class="arithmetic-btn" onclick="applyFilter('multiply_constant', {factor: parseFloat(document.getElementById('multiplyValue').value)})">Stretch intensities</button>
+                                <button class="arithmetic-btn" onclick="applyFilter('divide_constant', {factor: parseFloat(document.getElementById('multiplyValue').value)})">Compress intensities</button>
+                            </div>
+                        </div>
+                        <div class="filter-grid">
+                            <button class="filter-item" onclick="applyFilter('complement')"><i class="fas fa-adjust"></i>Complement</button>
+                            <button class="filter-item" onclick="applyFilter('solarize', {threshold: 128})"><i class="fas fa-sun"></i>Solarize</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Two-Image -->
+                <div class="category"><div class="category-header" onclick="toggleCategory(this)"><h3><i class="fas fa-images"></i> Two-Image Operations</h3><i class="fas fa-chevron-down"></i></div>
+                    <div class="category-content">
+                        <div class="filter-grid">
+                            <button class="filter-item" onclick="twoImageOperation('add_images')"><i class="fas fa-plus-circle"></i>Add</button>
+                            <button class="filter-item" onclick="twoImageOperation('subtract_images')"><i class="fas fa-minus-circle"></i>Subtract</button>
+                            <button class="filter-item" onclick="twoImageOperation('absolute_difference')"><i class="fas fa-not-equal"></i>Abs Diff</button>
+                            <button class="filter-item" onclick="twoImageOperation('blend_images')"><i class="fas fa-layer-group"></i>Blend</button>
+                            <button class="filter-item" onclick="twoImageOperation('foreground')"><i class="fas fa-user"></i>Foreground</button>
+                            <button class="filter-item" onclick="twoImageOperation('background')"><i class="fas fa-mountain"></i>Background</button>
+                        </div>
+                        <div class="param-group" style="margin-top:6px"><div class="param-label"><span>Blend Alpha</span><span id="blendAlphaVal">0.5</span></div><input type="range" id="blendAlpha" min="0" max="1" step="0.05" value="0.5" oninput="blendAlphaVal.textContent=this.value"></div>
+                        <div class="param-group"><div class="param-label"><span>FG/BG Threshold</span><span id="fgThresholdVal">30</span></div><input type="range" id="fgThreshold" min="0" max="100" value="30" oninput="fgThresholdVal.textContent=this.value"></div>
+                       
+                    </div>
+                </div>
+                
+                <!-- contrast enhancement  -->
+                <div class="category"><div class="category-header" onclick="toggleCategory(this)"><h3><i class="fas fa-chart-bar"></i> contrast enhancement</h3><i class="fas fa-chevron-down"></i></div>
+                    <div class="category-content"><div class="filter-grid">
+                        <button class="filter-item" onclick="applyFilter('histogram_equalization')"><i class="fas fa-chart-line"></i>Equalization</button>
+                        <button class="filter-item" onclick="applyFilter('histogram_stretching')"><i class="fas fa-expand-arrows-alt"></i>Stretching</button>
+                    </div></div>
+                </div>
+                
+                <!-- Filters -->
+                <div class="category"><div class="category-header" onclick="toggleCategory(this)"><h3><i class="fas fa-filter"></i> Filters</h3><i class="fas fa-chevron-down"></i></div>
+                    <div class="category-content">
+                        <div class="param-group"><div class="param-label"><span>Kernel Size</span><span id="kernelVal">3</span></div><input type="range" id="kernelSlider" min="3" max="15" step="2" value="3" oninput="kernelVal.textContent=this.value"></div>
+                        <div class="filter-grid">
+                            <button class="filter-item" onclick="applyFilter('mean_filter', {kernel: parseInt(kernelSlider.value)})"><i class="fas fa-th"></i>Mean</button>
+                            <button class="filter-item" onclick="applyFilter('median_filter', {kernel: parseInt(kernelSlider.value)})"><i class="fas fa-sort-numeric-up"></i>Median</button>
+                            <button class="filter-item" onclick="applyFilter('gaussian_filter', {kernel: 5, sigma: 1})"><i class="fas fa-wave-square"></i>Gaussian</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Edge Detection -->
+                <div class="category"><div class="category-header" onclick="toggleCategory(this)"><h3><i class="fas fa-border-all"></i>  Edge Detection</h3><i class="fas fa-chevron-down"></i></div>
+                    <div class="category-content">
+                        
+                        <div class="filter-grid">
+                            <button class="filter-item" onclick="applyFilter('sobel')"><i class="fas fa-arrows-alt-h"></i>Sobel</button>
+                            <button class="filter-item" onclick="applyFilter('prewitt')"><i class="fas fa-arrows-alt"></i>Prewitt</button>
+                            <button class="filter-item" onclick="applyFilter('roberts')"><i class="fas fa-crosshairs"></i>Roberts</button>
+                            <button class="filter-item" onclick="applyFilter('laplacian')"><i class="fas fa-border-style"></i>Laplacian</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Noise -->
+                <div class="category"><div class="category-header" onclick="toggleCategory(this)"><h3><i class="fas fa-random"></i> Noise</h3><i class="fas fa-chevron-down"></i></div>
+                    <div class="category-content"><div class="filter-grid">
+                        <button class="filter-item" onclick="applyFilter('salt_pepper', {ratio: 0.05})"><i class="fas fa-braille"></i>Salt & pepper 5%</button>
+                        <button class="filter-item" onclick="applyFilter('salt_pepper', {ratio: 0.1})"><i class="fas fa-braille"></i>Salt & pepper 10%</button>
+                        </div></div>
+                </div>
+                
+                <!-- Morphology -->
+                <div class="category"><div class="category-header" onclick="toggleCategory(this)"><h3><i class="fas fa-shapes"></i> Morphology</h3><i class="fas fa-chevron-down"></i></div>
+                    <div class="category-content"><div class="filter-grid">
+                        <button class="filter-item" onclick="applyFilter('dilation', {kernel: parseInt(kernelSlider.value)})"><i class="fas fa-expand"></i>Dilation</button>
+                        <button class="filter-item" onclick="applyFilter('erosion', {kernel: parseInt(kernelSlider.value)})"><i class="fas fa-compress"></i>Erosion</button>
+                        <button class="filter-item" onclick="applyFilter('opening', {kernel: parseInt(kernelSlider.value)})"><i class="fas fa-door-open"></i>Opening</button>
+                        <button class="filter-item" onclick="applyFilter('closing', {kernel: parseInt(kernelSlider.value)})"><i class="fas fa-door-closed"></i>Closing</button>
+                    </div></div>
+                </div>
+                
+                <!-- Segmentation -->
+                <div class="category"><div class="category-header" onclick="toggleCategory(this)"><h3><i class="fas fa-cut"></i> Segmentation</h3><i class="fas fa-chevron-down"></i></div>
+                    <div class="category-content">
+                        <div class="param-group"><div class="param-label"><span>Manual Threshold</span><span id="threshVal">128</span></div><input type="range" id="thresholdSlider" min="0" max="255" value="128" oninput="threshVal.textContent=this.value"></div>
+                        <div class="filter-grid">
+                            <button class="filter-item" onclick="applyFilter('otsu')"><i class="fas fa-chart-pie"></i>Otsu (Auto)</button>
+                            <button class="filter-item" onclick="applyFilter('adaptive_mean', {block_size: 11, C: 2})"><i class="fas fa-th-large"></i>Adaptive Mean</button>
+                            <button class="filter-item" onclick="applyFilter('binary', {threshold: parseInt(thresholdSlider.value)})"><i class="fas fa-sliders-h"></i>Manual</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let originalImage = null, currentImage = null, secondImageData = null;
+        let history = [], historyIndex = -1;
+        let beforeChart = null, afterChart = null;
+        let histogramsVisible = false;
+        
+        const imageInput = document.getElementById('imageInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const uploadNewBtn = document.getElementById('uploadNewBtn');
+        const uploadBtnInput = document.getElementById('uploadBtnInput');
+        const secondUploadArea = document.getElementById('secondUploadArea');
+        const secondImageInput = document.getElementById('secondImageInput');
+        const beforeImage = document.getElementById('beforeImage');
+        const afterImage = document.getElementById('afterImage');
+        const controlSidebar = document.getElementById('controlSidebar');
+        const kernelSlider = document.getElementById('kernelSlider');
+        const thresholdSlider = document.getElementById('thresholdSlider');
+        
+        function setupUpload(target, inputElement, isSecond = false) {
+            target.onclick = () => inputElement.click();
+            inputElement.onchange = (e) => { if (e.target.files[0]) uploadImage(e.target.files[0], isSecond); };
+        }
+        
+        setupUpload(uploadArea, imageInput, false);
+        uploadNewBtn.onclick = () => uploadBtnInput.click();
+        uploadBtnInput.onchange = (e) => { if (e.target.files[0]) uploadImage(e.target.files[0], false); };
+        setupUpload(secondUploadArea, secondImageInput, true);
+        
+        function changeArithmeticValue(d) { let i = document.getElementById('arithmeticValue'); i.value = parseInt(i.value) + d; }
+        function changeMultiplyValue(d) { let i = document.getElementById('multiplyValue'); i.value = (parseFloat(i.value) + d).toFixed(1); }
+        
+        function uploadImage(file, isSecond) {
+            const fd = new FormData(); fd.append('image', file);
+            showLoading();
+            fetch(isSecond ? '/upload_second' : '/upload', { method: 'POST', body: fd })
+                .then(r => r.json()).then(data => {
+                    if (data.success) {
+                        if (isSecond) {
+                            secondImageData = data.image;
+                            document.getElementById('secondImagePreview').innerHTML = '<i class="fas fa-check-circle" style="color:#10b981"></i> Loaded';
+                            showToast('Second image uploaded!', 'success');
+                        } else {
+                            originalImage = data.image; currentImage = data.image;
+                            beforeImage.innerHTML = '<img src="' + data.image + '">';
+                            afterImage.innerHTML = '<img src="' + data.image + '">';
+                            controlSidebar.style.display = 'flex';
+                            addToHistory(data.image);
+                            showToast('Image uploaded!', 'success');
+                            uploadBtnInput.value = ''; imageInput.value = '';
+                            if (histogramsVisible) setTimeout(fetchAndShowHistograms, 200);
+                        }
+                    }
+                    hideLoading();
+                }).catch(() => hideLoading());
+        }
+        
+        function applyFilter(operation, params = {}) {
+            if (!currentImage) { showToast('Upload an image first', 'warning'); return; }
+            showLoading();
+            fetch('/apply', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ operation, params: { kernel: parseInt(kernelSlider.value), ...params } })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    currentImage = data.image;
+                    afterImage.innerHTML = '<img src="' + data.image + '">';
+                    addToHistory(data.image);
+                    showToast('Applied: ' + operation, 'success');
+                    if (histogramsVisible) setTimeout(fetchAndShowHistograms, 200);
+                } else if (data.error) { showToast(data.error, 'warning'); }
+                hideLoading();
+            }).catch(() => hideLoading());
+        }
+        
+        function twoImageOperation(operation, extraParams = {}) {
+            if (!currentImage) { showToast('Upload first image', 'warning'); return; }
+            if (!secondImageData) { showToast('Upload second image first', 'warning'); return; }
+            showLoading();
+            const params = { ...extraParams };
+            if (operation === 'blend_images') params.alpha = parseFloat(document.getElementById('blendAlpha').value);
+            if (operation === 'foreground' || operation === 'background') params.threshold = parseInt(document.getElementById('fgThreshold').value);
+            fetch('/image_operations', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ operation, params })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    currentImage = data.image;
+                    afterImage.innerHTML = '<img src="' + data.image + '">';
+                    addToHistory(data.image);
+                    showToast('Applied: ' + operation, 'success');
+                    if (histogramsVisible) setTimeout(fetchAndShowHistograms, 200);
+                }
+                hideLoading();
+            }).catch(() => hideLoading());
+        }
+        
+        /* ===== HISTOGRAM ===== */
+        function toggleHistograms() {
+            histogramsVisible = !histogramsVisible;
+            const btn = document.getElementById('histToggleBtn');
+            const bp = document.getElementById('beforeHistPanel');
+            const ap = document.getElementById('afterHistPanel');
+            if (histogramsVisible) {
+                btn.classList.add('active');
+                btn.innerHTML = '<i class="fas fa-chart-bar"></i> Hide Histograms';
+                bp.classList.add('open'); ap.classList.add('open');
+                if (currentImage) fetchAndShowHistograms();
+            } else {
+                btn.classList.remove('active');
+                btn.innerHTML = '<i class="fas fa-chart-bar"></i> Show Histograms';
+                bp.classList.remove('open'); ap.classList.remove('open');
+            }
+        }
+        
+        function fetchAndShowHistograms() {
+            fetch('/get_both_histograms', { method: 'POST' })
+                .then(r => r.json()).then(data => {
+                    if (data.success) {
+                        if (data.before) renderHistogram('beforeHistCanvas', data.before, 'Before', 'rgba(124,58,237,0.6)', '#a78bfa');
+                        if (data.after) renderHistogram('afterHistCanvas', data.after, 'After', 'rgba(5,150,105,0.6)', '#34d399');
+                    }
+                }).catch(() => {});
+        }
+        
+        function renderHistogram(canvasId, histData, label, bgColor, borderColor) {
+            const canvas = document.getElementById(canvasId);
+            const existingChart = Chart.getChart(canvas);
+            if (existingChart) existingChart.destroy();
+            
+            new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 256}, (_, i) => i),
+                    datasets: [{ label: label + ' Histogram', data: histData, backgroundColor: bgColor, borderColor: borderColor, borderWidth: 0.5, barPercentage: 1, categoryPercentage: 1 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
+                    plugins: { legend: { display: true, labels: { color: '#999', font: { size: 9 }, boxWidth: 10 } }, tooltip: { callbacks: { label: (c) => 'Count: ' + c.raw } } },
+                    scales: {
+                        x: { display: true, ticks: { stepSize: 64, color: '#555', maxRotation: 0, font: { size: 7 } }, grid: { display: false } },
+                        y: { display: true, ticks: { color: '#555', font: { size: 7 }, maxTicksLimit: 4 }, grid: { color: '#1a1a2a' } }
+                    }
+                }
+            });
+        }
+        
+        function resetImage() {
+            if (!originalImage) return; showLoading();
+            fetch('/reset', { method: 'POST' }).then(r => r.json()).then(data => {
+                if (data.success) { currentImage = data.image; afterImage.innerHTML = '<img src="' + data.image + '">'; addToHistory(data.image); showToast('Reset to original', 'success'); if (histogramsVisible) setTimeout(fetchAndShowHistograms, 200); }
+                hideLoading();
+            });
+        }
+        
+        function saveImage() {
+            fetch('/save', { method: 'POST' }).then(r => r.blob()).then(blob => {
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+                a.download = 'processed_' + Date.now() + '.png'; a.click(); URL.revokeObjectURL(a.href);
+                showToast('Image saved!', 'success');
+            });
+        }
+        
+        function setView(mode) {
+            const bp = document.getElementById('beforePanel'), ap = document.getElementById('afterPanel'), d = document.getElementById('divider');
+            bp.style.display = (mode === 'after') ? 'none' : 'flex';
+            ap.style.display = (mode === 'before') ? 'none' : 'flex';
+            d.style.display = (mode === 'split') ? 'block' : 'none';
+            document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+            event.target.closest('.view-btn').classList.add('active');
+        }
+        
+        function toggleCategory(header) {
+            const content = header.nextElementSibling; content.classList.toggle('open');
+            const icon = header.querySelector('.fa-chevron-down');
+            if (icon) icon.style.transform = content.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0)';
+        }
+        
+        function addToHistory(data) { history = history.slice(0, historyIndex + 1); history.push(data); historyIndex++; }
+        function undo() { if (historyIndex > 0) { historyIndex--; currentImage = history[historyIndex]; afterImage.innerHTML = '<img src="' + currentImage + '">'; showToast('Undo', 'info'); if (histogramsVisible) setTimeout(fetchAndShowHistograms, 200); } else showToast('Nothing to undo', 'warning'); }
+        function redo() { if (historyIndex < history.length - 1) { historyIndex++; currentImage = history[historyIndex]; afterImage.innerHTML = '<img src="' + currentImage + '">'; showToast('Redo', 'info'); if (histogramsVisible) setTimeout(fetchAndShowHistograms, 200); } else showToast('Nothing to redo', 'warning'); }
+        
+        function showLoading() { const o = document.createElement('div'); o.className = 'loading-overlay'; o.id = 'loadingOverlay'; o.innerHTML = '<div class="spinner"></div>'; document.querySelector('.main-canvas').appendChild(o); }
+        function hideLoading() { const el = document.getElementById('loadingOverlay'); if (el) el.remove(); }
+        function showToast(msg, type) { const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = '<i class="fas fa-' + (type==='success'?'check-circle':type==='warning'?'exclamation-triangle':'info-circle') + '"></i> ' + msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2500); }
+    </script>
+</body>
+</html>
