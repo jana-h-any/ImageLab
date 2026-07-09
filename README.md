@@ -2,11 +2,6 @@
 
 > Image processing toolkit — all algorithms implemented from scratch.
 
-![Python](https://img.shields.io/badge/Python-3.x-blue?style=flat-square&logo=python)
-![Flask](https://img.shields.io/badge/Flask-Backend-black?style=flat-square&logo=flask)
-![NumPy](https://img.shields.io/badge/NumPy-Algorithms-013243?style=flat-square&logo=numpy)
-![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
-
 ---
 
 ## About
