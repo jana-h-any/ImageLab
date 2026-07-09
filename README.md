@@ -113,6 +113,15 @@ ImageLab/
 
 ---
 
-## Author
+## 👩‍💻 Author
 
-Built by [Jana Hany](https://github.com/jana-h-any) — Image Processing course project.
+**Jana Hany**  
+
+
+## 📬 Contact
+
+[GitHub](https://github.com/jana-h-any): @jana-h-any
+
+[LinkedIn](www.linkedin.com/in/jana-hany) : [jana-hany]
+
+[Email](janahanymostafa.h@gmail.com): [janahanymostafa.h@gmail.com]
